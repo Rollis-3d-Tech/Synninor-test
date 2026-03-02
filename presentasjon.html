@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <title>Enkel Presentasjon</title>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/web-pubsub-client@1/dist/web-pubsub-client.min.js"></script>
+  <style>
+    body { margin: 0; height: 100vh; background-color: white; transition: background-color 0.5s; }
+    .sirkel { position: absolute; top: 50%; left: 50%; width: 100px; height: 100px; background-color: yellow; border-radius: 50%; transform: translate(-50%, -50%); }
+  </style>
+</head>
+<body>
+  <script>
+    let pubsubClient;
+    let groupName = 'presentasjoner';  // Samme som i kontroll – del denne med kontrollbruker
+
+    async function initPubSub() {
+      // Hent access URL fra Azure Function
+      const res = await fetch('https://din-swa-url.azurestaticapps.net/api/negotiate');  // Erstatt med din SWA-URL
+      const { url } = await res.json();
+
+      pubsubClient = new Azure.WebPubSub.WebPubSubClient(url);
+      await pubsubClient.start();
+      await pubsubClient.joinGroup(groupName);
+    }
+
+    initPubSub().catch(console.error);
+
+    pubsubClient.on('group-message', e => {
+      const data = e.detail.message.data;
+
+      if (data.kommando === 'sett-svart-side') {
+        document.body.style.backgroundColor = data.aktiv ? 'black' : 'white';
+      }
+
+      if (data.kommando === 'vis-gul-sirkel') {
+        if (data.aktiv) {
+          const sirkel = document.createElement('div');
+          sirkel.className = 'sirkel';
+          document.body.appendChild(sirkel);
+        }
+      }
+
+      if (data.kommando === 'reset') {
+        document.body.style.backgroundColor = 'white';
+        document.querySelectorAll('.sirkel').forEach(el => el.remove());
+      }
+    });
+  </script>
+</body>
+</html>

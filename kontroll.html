@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <title>Enkel Kontrollside</title>
+  <script src="https://cdn.jsdelivr.net/npm/@azure/web-pubsub-client@1/dist/web-pubsub-client.min.js"></script>
+</head>
+<body>
+  <h1>Enkel Kontroll</h1>
+  <button id="btn-svart-side">Aktiver Svart Side</button>
+  <button id="btn-gul-sirkel">Vis Gul Sirkel</button>
+  <button id="btn-reset">Tilbakestill</button>
+
+  <script>
+    let pubsubClient;
+    let groupName = 'presentasjoner';  // Endre til unik sesjon-ID for isolasjon
+    let svartAktiv = false;
+
+    async function initPubSub() {
+      // Hent access URL fra Azure Function (sikker måte)
+      const res = await fetch('/api/negotiate');  // Erstatt med din SWA-URL hvis nødvendig
+      const { url } = await res.json();
+
+      pubsubClient = new Azure.WebPubSub.WebPubSubClient(url);
+      await pubsubClient.start();
+      await pubsubClient.joinGroup(groupName);
+    }
+
+    initPubSub().catch(console.error);
+
+    function sendKommando(data) {
+      pubsubClient.sendToGroup(groupName, data, 'json');
+    }
+
+    document.getElementById('btn-svart-side').onclick = () => {
+      svartAktiv = !svartAktiv;
+      sendKommando({ kommando: 'sett-svart-side', aktiv: svartAktiv });
+      this.textContent = svartAktiv ? 'Deaktiver Svart Side' : 'Aktiver Svart Side';
+    };
+
+    document.getElementById('btn-gul-sirkel').onclick = () => {
+      sendKommando({ kommando: 'vis-gul-sirkel', aktiv: true });
+    };
+
+    document.getElementById('btn-reset').onclick = () => {
+      sendKommando({ kommando: 'reset' });
+    };
+  </script>
+</body>
+</html>
